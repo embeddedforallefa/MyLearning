@@ -1,0 +1,7 @@
+CFLAGS=-Wall -g
+
+build: 
+	make hello
+
+clean:
+	rm -f hello
