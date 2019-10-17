@@ -1,7 +1,7 @@
 CFLAGS=-Wall -g
 
 all: 
-	make test5_break
+	make pointers
 
 clean:
-	rm -f test5_break
+	rm -f pointers
