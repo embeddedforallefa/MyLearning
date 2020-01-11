@@ -1,0 +1,233 @@
+//+------------------------------------------------------------------+
+//|                                        Pearlock_Trading_V0.1.mq4 |
+//|                                Copyright 2020, Pearlock pvt.Ltd. |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2020, Pearlock pvt.Ltd."
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+#property strict
+
+//--------------------------------------------------------------- 1 --
+                                   // Numeric values for M15
+extern double StopLoss   =200;     // SL for an opened order
+extern double TakeProfit =39;      // ТР for an opened order
+extern int    Period_MA_1=11;      // Period of MA 1
+extern int    Period_MA_2=31;      // Period of MA 2
+extern double Rastvor    =28.0;    // Distance between MAs 
+extern double Lots       =0.1;     // Strictly set amount of lots
+extern double Prots      =0.07;    // Percent of free margin
+
+string InpFileName="licence.txt"; // file name
+string InpDirectoryName=TerminalInfoString(TERMINAL_COMMONDATA_PATH); // directory name
+int licence_len=10;
+
+bool enable_EA=false;
+
+bool Work=true;                    // EA will work.
+string Symb;                       // Security name
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+//--- create timer
+//   EventSetTimer(60);
+   
+//--- open the file
+   string licence_local;
+   string licence_server="7204533918";
+   ResetLastError();
+   int file_handle = FileOpen(InpFileName,FILE_READ|FILE_TXT|FILE_ANSI);
+   PrintFormat("file handle is %d",file_handle);
+   if(file_handle!=INVALID_HANDLE)
+     {
+      PrintFormat("%s file is available for reading",InpFileName);
+      PrintFormat("File path: %s\\Files\\",TerminalInfoString(TERMINAL_DATA_PATH));
+      //--- read data from the file
+      while(!FileIsEnding(file_handle))
+        {
+         //--- read the licence string
+         licence_local=FileReadString(file_handle);
+        }
+      //--- close the file
+      FileClose(file_handle);
+      PrintFormat("Data is read, %s file is closed",InpFileName);
+     }
+   else
+      PrintFormat("Failed to open %s file, Error code = %d",InpFileName,GetLastError());
+   
+   if(licence_server==licence_local)
+   {
+      enable_EA=true;
+   }
+   else
+   {
+      enable_EA=false;
+   }
+   
+//---
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+//--- destroy timer
+   EventKillTimer();
+   
+  }
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+  {
+  
+   int
+   Total,                           // Amount of orders in a window 
+   Tip=-1,                          // Type of selected order (B=0,S=1)
+   Ticket;                          // Order number
+   double
+   MA_1_t,                          // Current MA_1 value
+   MA_2_t,                          // Current MA_2 value 
+   Lot,                             // Amount of lots in a selected order
+   Lts,                             // Amount of lots in an opened order
+   Min_Lot,                         // Minimal amount of lots
+   Step,                            // Step of lot size change
+   Free,                            // Current free margin
+   One_Lot,                         // Price of one lot
+   Price,                           // Price of a selected order
+   SL,                              // SL of a selected order
+   TP;                              // TP за a selected order
+   bool
+   Ans  =false,                     // Server response after closing
+   Cls_B=false,                     // Criterion for closing Buy
+   Cls_S=false,                     // Criterion for closing Sell
+   Opn_B=false,                     // Criterion for opening Buy
+   Opn_S=false;                     // Criterion for opening Sell
+//--------------------------------------------------------------- 3 --
+   // Preliminary processing
+   if(Bars < Period_MA_2)                       // Not enough bars
+     {
+      Alert("Not enough bars in the window. EA doesn't work.");
+      return;                                   // Exit start()
+     }
+   if(Work==false)                              // Critical error
+     {
+      Alert("Critical error. EA doesn't work.");
+      return;                                   // Exit start()
+     }
+//--------------------------------------------------------------- 4 --
+
+//--------------------------------------------------------------- 5 --
+  if(enable_EA==true)
+  {
+  PrintFormat("You do have a valid licece");
+   // Trading criteria
+   MA_1_t=iMA(NULL,0,Period_MA_1,0,MODE_LWMA,PRICE_TYPICAL,0); // МА_1
+   MA_2_t=iMA(NULL,0,Period_MA_2,0,MODE_LWMA,PRICE_TYPICAL,0); // МА_2
+ 
+   if (MA_1_t > MA_2_t + Rastvor*Point)         // If difference between
+     {                                          // ..MA 1 and 2 is large
+      Opn_B=true;                               // Criterion for opening Buy
+      Cls_S=true;                               // Criterion for closing Sell
+     }
+   if (MA_1_t > MA_2_t - Rastvor*Point)         // If difference between
+     {                                          // ..MA 1 and 2 is large
+      Opn_S=true;                               // Criterion for opening Sell
+      Cls_B=true;                               // Criterion for closing Buy
+     }
+  }
+  else
+  {
+      PrintFormat("You do not have a valid licece : contact Pearlock");
+  }
+
+//--------------------------------------------------------------- 6 --
+//--------------------------------------------------------------- 9 --
+   return;
+  }
+//+------------------------------------------------------------------+
+//| Timer function                                                   |
+//+------------------------------------------------------------------+
+void OnTimer()
+  {
+//---
+   
+  }
+//+------------------------------------------------------------------+
+//| Tester function                                                  |
+//+------------------------------------------------------------------+
+double OnTester()
+  {
+//---
+   double ret=0.0;
+//---
+
+//---
+   return(ret);
+  }
+//+------------------------------------------------------------------+
+//| ChartEvent function                                              |
+//+------------------------------------------------------------------+
+void OnChartEvent(const int id,
+                  const long &lparam,
+                  const double &dparam,
+                  const string &sparam)
+  {
+//---
+   
+  }
+//+------------------------------------------------------------------+
+//-------------------------------------------------------------- 10 --
+int Fun_Error(int Error)                        // Function of processing errors
+  {
+   switch(Error)
+     {                                          // Not crucial errors            
+      case  4: Alert("Trade server is busy. Trying once again..");
+         Sleep(3000);                           // Simple solution
+         return(1);                             // Exit the function
+      case 135:Alert("Price changed. Trying once again..");
+         RefreshRates();                        // Refresh rates
+         return(1);                             // Exit the function
+      case 136:Alert("No prices. Waiting for a new tick..");
+         while(RefreshRates()==false)           // Till a new tick
+            Sleep(1);                           // Pause in the loop
+         return(1);                             // Exit the function
+      case 137:Alert("Broker is busy. Trying once again..");
+         Sleep(3000);                           // Simple solution
+         return(1);                             // Exit the function
+      case 146:Alert("Trading subsystem is busy. Trying once again..");
+         Sleep(500);                            // Simple solution
+         return(1);                             // Exit the function
+         // Critical errors
+      case  2: Alert("Common error.");
+         return(0);                             // Exit the function
+      case  5: Alert("Old terminal version.");
+         Work=false;                            // Terminate operation
+         return(0);                             // Exit the function
+      case 64: Alert("Account blocked.");
+         Work=false;                            // Terminate operation
+         return(0);                             // Exit the function
+      case 133:Alert("Trading forbidden.");
+         return(0);                             // Exit the function
+      case 134:Alert("Not enough money to execute operation.");
+         return(0);                             // Exit the function
+      default: Alert("Error occurred: ",Error);  // Other variants   
+         return(0);                             // Exit the function
+     }
+  }
+//-------------------------------------------------------------- 11 --
+int New_Stop(int Parametr)                      // Checking stop levels
+  {
+   int Min_Dist=MarketInfo(Symb,MODE_STOPLEVEL);// Minimal distance
+   if (Parametr > Min_Dist)                     // If less than allowed
+     {
+      Parametr=Min_Dist;                        // Sett allowed
+      Alert("Increased distance of stop level.");
+     }
+   return(Parametr);                            // Returning value
+  }
+//--------------------------------------------------------------------
+//--------------------------------------------------------------------
