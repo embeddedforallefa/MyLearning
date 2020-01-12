@@ -58,9 +58,6 @@ int OnInit()
       PrintFormat("the resulting array size is: %d ",ArraySize(result));
       for(int i=0; i < licence_len; i++)
            {
-            Print(result[i]);
-            Print(licence_local[i]);
-            Print("*******");
             if((i%2)==0)
             {
                if(result[i]==licence_local[i]+1)
