@@ -15,7 +15,6 @@ struct Person *Person_create(char *name, int age, int height, int weight)
 {
     struct Person *who = malloc(sizeof (struct Person));
     assert(who != NULL);
-
     who->name = strdup (name);
     who->age = age;
     who->height = height;
@@ -49,7 +48,7 @@ int main(int argc, char *argv[])
     // print them out and where they are in memory
     printf("veeresh is at memory location %p:\n", veer);
     Person_Print(veer);
-    printf("Madhu is at memory location %p:\n", veer);
+    printf("Madhu is at memory location %p:\n", madhu);
     Person_Print(madhu);
 
     // make everyone age 20 years and print them again
