@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1514140574 source:h:\git_projects\mylearning\test_c\cprojects\devpkg\devpkg\main.c
+	<stdio.h>
+	<stdlib.h>
+
