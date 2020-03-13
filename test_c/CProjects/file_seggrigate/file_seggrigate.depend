@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1583686245 source:h:\git_projects\mylearning\test_c\cprojects\file_seggrigate\main.c
+	<stdio.h>
+	<stdlib.h>
+
