@@ -243,9 +243,9 @@ def main():
                 xaxis_title="payload(bytes)",
                 yaxis_title="time(µs)")
 
-        except KeyError as error:  # incase there is error due to setup info mismatch
+        except KeyError as error:  # incase there is error due to setup info mismatch, just show the complete setup info
             layout = go.Layout(
-                title="",
+                title="setup: " + str(json_data['setup']),
                 xaxis_title="payload(bytes)",
                 yaxis_title="time(µs)")
     else:
@@ -256,9 +256,9 @@ def main():
                 xaxis_title="payload(bytes)",
                 yaxis_title="time(µs)")
 
-        except KeyError as error:  # incase there is error due to setup info mismatch
+        except KeyError as error:  # incase there is error due to setup info mismatch, just show the complete setup info
             layout = go.Layout(
-                title="",
+                title="setup: " + str(json_data['setup']),
                 xaxis_title="payload(bytes)",
                 yaxis_title="time(µs)")
 
