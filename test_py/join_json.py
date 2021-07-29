@@ -19,8 +19,8 @@ result_files = []
 for file in os.listdir("./json"):
     if file.endswith(".txt"):
         result_files.append(file)
-        
-print(len(result_files))
+
+print((result_files))
 
 final_data = {} # contains all json data
 test_type_element_list = [] # contains all test type information

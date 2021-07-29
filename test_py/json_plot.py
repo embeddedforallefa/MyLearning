@@ -10,6 +10,7 @@
 ************************************************************************************************'''
 # Python script to plot results
 import json
+from os import truncate
 import sys
 import plotly.graph_objects as go
 import os.path
@@ -23,58 +24,86 @@ print("Enter the Type of plot you like to see:")
 print("Default plot:     1")
 print("Statistical plot: 2")
 print("Both plots:       3")
+print()
+print("Enter the json file name to plot as second argument.")
+print("If no input, all test result files present in current directiry will be taken for plotting")
+print()
 
+# *************************** construt json **********************************************
+is_single_file = False
 result_file = './result.json'
+
 if(os.path.exists(result_file)):
     os.remove(result_file)
 
-print("fetching result files...!")
-# Read all the result files
-result_files = []
-for file in os.listdir("."):
-    if file.endswith(".json"):
-        result_files.append(file)
+try:
+    single_file = "./" + sys.argv[2]
+    is_single_file = True
 
-if(len(result_files) == 0):
-    print("result file/s does not exist")
-    print("Noting to do : exit....!")
-    exit()
+except IndexError as error:  # if the resut file input is not provided
+    print("fetching result files present in working directory...!")
+
+if(is_single_file == False):
+    # Read all the result files
+    result_files = []
+    for file in os.listdir("."):
+        if file.endswith(".json"):
+            result_files.append(file)
+
+    if(len(result_files) == 0):
+        print("result file/s does not exist")
+        print("Noting to do : exit....!")
+        exit()
+    else:
+        print("file/s : ")
+        print(result_files)
+
+    print("joining all files to one " + result_file + " file")
+
+    final_data = {}  # contains all json data
+    setup_element_list = []  # contains all test type information
+    test_type_element_list = []  # contains all test type information
+
+    for file in result_files:
+        with open("./"+file) as f:
+            json_file_data = json.load(f)
+
+            # update to setup inoformation
+            setup_element = json_file_data['setup']
+            if(setup_element_list.count(setup_element) == 0):
+                setup_element_list.append(setup_element)
+
+            # update test type inforrmation from each file
+            for test_type_element in json_file_data['Test_Type']:
+                test_type_element["name"] = test_type_element["name"] + \
+                    file[slice(6, -5)]
+                test_type_element_list.append(test_type_element)
+
+    # sorted to have largest setup info as first element
+    final_data.update(
+        {"setup": sorted(setup_element_list, key=lambda sub: len(sub), reverse=True)})
+    final_data.update({"Test_Type": test_type_element_list})
+
+    # Write the initial json object (list of dicts)
+    with open(result_file, mode='w') as f:
+        json.dump(final_data, f)
+
 else:
-    print("files are : ")
-    print(result_files)
-
-print("joining all files to one "+ result_file + " file")
-
-final_data = {} # contains all json data
-test_type_element_list = [] # contains all test type information
-
-for file in result_files:
-    with open("./"+file) as f:
-        json_data = json.load(f)
-
-        # update to setup inoformation
-        setup_element = json_data['setup']
-        final_data.update({"setup": setup_element})
-
-        # update test type inforrmation from each file
-        for test_type_element in json_data['Test_Type']:
-            test_type_element["name"] = test_type_element["name"]+file[slice(6, -5)]
-            test_type_element_list.append(test_type_element)
-
-final_data.update({"Test_Type" : test_type_element_list})
+    result_file = single_file
 
 
-# Write the initial json object (list of dicts)
-with open(result_file, mode='w') as f:
-    json.dump(final_data, f)
+# *************************** plotting **********************************************
 
+print('Using ' + result_file)
 
 with open(result_file) as f:
     json_data = json.load(f)
 
-print('Using ' + result_file)
+if(is_single_file == False):
+    clockCyclesPerSec = json_data['setup'][0]['cyclesPerSec']
+else:
+    clockCyclesPerSec = json_data['setup']['cyclesPerSec']
 
-clockCyclesPerSec = json_data['setup']['cyclesPerSec']
 
 def select_test_type(test_types, test_type_name):
     ''' select_test_type '''
@@ -110,7 +139,7 @@ def payload(entry):
 
 def avglatency(entry):
     ''' Cycles values in micro seconds'''
-    return round((entry['Cycles']* 1000000)/clockCyclesPerSec)
+    return round((entry['Cycles'] * 1000000)/clockCyclesPerSec)
 
 
 def throughput(entry):
@@ -159,7 +188,7 @@ def plot_test_type_stats(layout, data_set, test_type):
 
     fig.update_layout(
         title="roundtrips : {0}, env : {1}, test_type : {2}".format(
-            get_repetitions(), json_data['setup']['env'], test_type),
+            get_repetitions(), json_data['setup'][0]['env'], test_type),
         xaxis_title="payload(bytes)",
         yaxis_title="time(µs)")
 
@@ -195,6 +224,7 @@ def get_repetitions():
 # test_types.append('aracom_stack')
 # data_set['aracom_stack'] = prepare_stack_latency(data_set)
 
+
 def main():
     ''' plot latency v/s payload for different test_types '''
     test_types = [test_type["name"] for test_type in json_data["Test_Type"]]
@@ -205,12 +235,32 @@ def main():
     #              ]
 
     data_set = {x: get_test_type_entries(x) for x in test_types}
+    if(is_single_file == False):
+        try:
+            layout = go.Layout(
+                title="roundtrips : {0}, env : {1}, os : {2}, release:{3} , version: {4}".format(
+                    get_repetitions(), json_data['setup'][0]['env'], json_data['setup'][0]['os'], json_data['setup'][0]['release'], json_data['setup'][0]['version']),
+                xaxis_title="payload(bytes)",
+                yaxis_title="time(µs)")
 
-    layout = go.Layout(
-        title="roundtrips : {0}, env : {1}, os : {2}, release:{3} , version: {4}".format(
-            get_repetitions(), json_data['setup']['env'], json_data['setup']['os'], json_data['setup']['release'],json_data['setup']['version']),
-        xaxis_title="payload(bytes)",
-        yaxis_title="time(µs)")
+        except KeyError as error:  # incase there is error due to setup info mismatch
+            layout = go.Layout(
+                title="",
+                xaxis_title="payload(bytes)",
+                yaxis_title="time(µs)")
+    else:
+        try:
+            layout = go.Layout(
+                title="roundtrips : {0}, env : {1}, os : {2}, release:{3} , version: {4}".format(
+                    get_repetitions(), json_data['setup']['env'], json_data['setup']['os'], json_data['setup']['release'], json_data['setup']['version']),
+                xaxis_title="payload(bytes)",
+                yaxis_title="time(µs)")
+
+        except KeyError as error:  # incase there is error due to setup info mismatch
+            layout = go.Layout(
+                title="",
+                xaxis_title="payload(bytes)",
+                yaxis_title="time(µs)")
 
     if (sys.argv[1] == '1') or (sys.argv[1] == '3'):
         figure1 = plot_chart(layout, data_set, test_types)
